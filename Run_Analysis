@@ -1,0 +1,64 @@
+install.packages("tidyverse")
+gcd.zip <- download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip", destfile = "gcd.zip")
+unzip("gcd.zip")
+setwd("UCI HAR Dataset")                        
+library(dplyr)
+
+#download x train and x test data
+xtrain <- read.table("train/X_train.txt")
+xtest <- read.table("test/X_test.txt")
+
+#bind x test and x train data by rows
+xdata <- rbind(xtrain, xtest)
+
+#download features data
+features <- read.table("features.txt", stringsAsFactors = F)
+#replace column names in xdata w/ features data from previous step
+names(xdata) <- make.names(features$V2, unique = T)
+
+#reduce columns to include only ones in mean or std
+xdata <- select(xdata, matches("mean|std"))
+
+#download sunject train and subject test data
+subtrain <- read.table("train/subject_train.txt")
+subtest <- read.table("test/subject_test.txt")
+
+#bind subtrain and subject data by rows
+subject <- rbind(subtrain, subtest)
+
+#add column named Subject to xdata w/ subject created above
+xdata$subject <- subject$V1
+
+#download y train and ytest data
+ytrain <- read.table("train/y_train.txt")
+ytest <- read.table("test/y_test.txt")
+
+#combine ytrain and ytest
+activity <- rbind(ytrain, ytest)
+
+#add column named v1 to xdata w/ activity data created above
+xdata$V1 <- activity$V1
+
+#download activity labels data
+actlab <- read.table("activity_labels.txt")
+
+#join column to xdata w/ actlab created above
+xdata <- left_join(xdata, actlab)
+
+#select columns in desired order ommiting column v1
+xdata <- select(xdata,subject, V2, 1:86, -V1)
+
+#change column 2 name to acitvity
+names(xdata)[2] <- "Activity"
+
+#create tidy data that averages data by Subject then Activity
+tidy <- xdata%>%
+  group_by(subject, Activity)%>%
+  summarize_all(mean)
+
+#write tidy text file
+write.table(tidy, "tidy.txt", row.name = FALSE)
+
+
+str(tidy)
+str(xdata)
